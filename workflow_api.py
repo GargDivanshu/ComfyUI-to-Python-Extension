@@ -271,9 +271,9 @@ def main():
             )
             saveImg = SaveImage()
 
-            saveImg.save_images(images=[vaedecode_8[0]], filename_prefix="OutPut")
-            print("saveImg")
-            print(saveImg)
+            finale = saveImg.save_images(images=vaedecode_8[0], filename_prefix="OutPut")
+            print("finale")
+            print(finale)
             
 #             output_folder = 'home/sagemaker-user-lab/Comfyui_Sagemaker/ComfyUI/output'
 
