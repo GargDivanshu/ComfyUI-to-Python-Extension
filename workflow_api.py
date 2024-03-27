@@ -4,7 +4,54 @@ import sys
 from typing import Sequence, Mapping, Any, Union
 import torch
 from PIL import Image
+from flask import Flask, request, jsonify
 import torchvision.transforms as T
+from werkzeug.utils import secure_filename
+
+
+app = Flask(__name__)
+
+@app.route('/disney', methods=['POST'])
+
+# ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in set(['png', 'jpg', 'jpeg', 'gif'])
+           
+def disney():
+    # Assuming you're receiving an image as part of the request
+    # You might need to adapt this part depending on your input
+    base_path = "home/sagemaker-user-lab/Comfyui-Sagemaker/ComfyUI/input/"
+
+    if 'image' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    image_file = request.files['image']
+
+    # If the user does not select a file, the browser submits an empty file without a filename
+    if image_file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    if image_file and allowed_file(image_file.filename):
+        filename = secure_filename(image_file.filename)
+        image_path = os.path.join(base_path, filename)
+        image_file.save(image_path)
+
+    # Save the image temporarily or process it as needed
+    # image_path = "temp_image.png"
+    # image_file.save(image_path)
+    # image_path = os.path.join(base_path, image_file.filename)
+
+    # Call your model/script's main function or the relevant function to process the image
+        output = main(image_file.filename)  # Adapt this call to your function's needs
+
+    # Return the result
+    # This could be a direct output, a path to a generated image, etc.
+        
+        return jsonify({"message": "Image processed", "output": output})
+    else:
+        return jsonify({"error": "Invalid file type"}), 400
+
 
 def get_value_at_index(obj: Union[Sequence, Mapping], index: int) -> Any:
     """Returns the value at the given index of a sequence or mapping.
@@ -123,7 +170,7 @@ from nodes import (
 )
 
 
-def main():
+def main(image_path: str, img_desc: str):
     import_custom_nodes()
     with torch.inference_mode():
         checkpointloadersimple = CheckpointLoaderSimple()
@@ -134,7 +181,7 @@ def main():
 
         cliptextencode = CLIPTextEncode()
         cliptextencode_6 = cliptextencode.encode(
-            text="image of a man with grey woolen coat, front pose, light brown hair",
+            text=img_desc,
             clip=get_value_at_index(checkpointloadersimple_4, 1),
         )
 
@@ -144,7 +191,7 @@ def main():
 
         loadimage = LoadImage()
         loadimage_14 = loadimage.load_image(
-            image="disney.png"
+            image=image_path,
         )
 
         vaeloader = VAELoader()
@@ -164,7 +211,7 @@ def main():
         )
 
         cliptextencode_21 = cliptextencode.encode(
-            text="a ((disney pixar cartoon)) highly detailed image of a man with grey woolen coat, front pose, light brown hair\nvibrant, distinct colors, with a clear, smudge-free background. Emphasize sharp details and smooth textures.",
+            text="a ((disney pixar cartoon)) " + img_desc + "\nvibrant",
             clip=get_value_at_index(checkpointloadersimple_4, 1),
         )
 
@@ -271,9 +318,10 @@ def main():
             )
             saveImg = SaveImage()
 
-            finale = saveImg.save_images(images=vaedecode_8[0], filename_prefix="OutPut")
-            print("finale")
-            print(finale)
+            saveImg.save_images(images=vaedecode_8[0], filename_prefix="OutPut")
+            
+            print("saveImg")
+            print(saveImg)
             
 #             output_folder = 'home/sagemaker-user-lab/Comfyui_Sagemaker/ComfyUI/output'
 
@@ -300,4 +348,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True, host='0.0.0.0', port=5000)
